@@ -3,6 +3,22 @@
 # a set of routines which enable moOde
 # to play a music CD
 
+# V0.2 2021-05-14
+# EC - tested on MoodeAudio 7.2
+#    - build a play list from the CD content 
+#      and run that play list at the end of
+#      the process. The play list use the
+#      EXTM3U format 
+#    - The titles of the tracks are added to
+#      the playlist by requesting MusicBrainz
+#    - If the MusicBrainz based playlist failed
+#      a simple playlist is build usind cdparanoia
+#    - adds the install of few packages useful for
+#      the musicbrainz.py script
+#        - python3-musicbrainzngs 
+#        - python3-requests 
+#        - python3-libdiscid
+
 # V0.1 2020-01-21
 # UPD - changed addaudiocd.sh and install.sh
 #       to use track count from udev instead 
