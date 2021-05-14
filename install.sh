@@ -10,7 +10,8 @@ fi
 sudo apt -y install libcdio-utils \
                     python3-musicbrainzngs \
                     python3-requests \
-                    python3-libdiscid
+                    python3-libdiscid \
+                    abcde
 
 sudo cp addaudiocd.sh /usr/local/bin/addaudiocd.sh
 sudo cp remaudiocd.sh /usr/local/bin/remaudiocd.sh
