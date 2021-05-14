@@ -11,18 +11,22 @@ else
   exit 1
 fi
 
-#get the track count from cdparanoia
-musicbrainz.py > /var/lib/mpd/playlists/CDPlayer.m3u
-if [ ! -s /var/lib/mpd/playlists/CDPlayer.m3u ]; then
-  cdparanoia -vsQ 2>&1 | \
-      awk '/^TOTAL/ {on=0} (on) {print $1,$3} /^=+$/ {on=1}' | \
-      sed 's/\./:/' | \
-      sed -E 's/[ []|\]//g' | \
-      awk -F':' 'BEGIN {print "#EXTM3U";print ""}\
-                       {print "#EXTINF:" int($2*60+$3) ",CD Piste",$1 ; print "cdda:///"$1;print ""}' \
-      > /var/lib/mpd/playlists/CDPlayer.m3u
+CDPLAYLIST=/var/lib/mpd/playlists/CDPlayer.m3u
+
+/usr/bin/eject -x $(/usr/bin/eject -X)
+/usr/bin/cd-info | cd-info_m3u.awk > $CDPLAYLIST
+status=$?
+
+if (( status == 2 )); then
+   musicbrainz.py > "$CDPLAYLIST.new"
+   if [ -s "$CDPLAYLIST.new" ]; then
+      mv "$CDPLAYLIST.new" "$CDPLAYLIST"
+   else
+      rm "$CDPLAYLIST.new"
+   fi
 fi
 
 /usr/bin/mpc -q clear
 /usr/bin/mpc -q load CDPlayer
+/usr/bin/eject -x 2
 /usr/bin/mpc -q play
