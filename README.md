@@ -6,7 +6,7 @@ The code assumes that a CD drive suitable for audio playback is already connecte
 
 ## Status
 
-No substantive work has been done since Version 1 was fielded in 2020.
+On May the 14th, I restarted to develop that small project that was sleeping since a year.
 
 ## History
 
@@ -14,11 +14,18 @@ This work began as a contribution to the moOde project from Ashley Cox (https://
 
 Similar work is described in https://github.com/TongboZhang/Moode_Extension. See additional links there.
 
+On May the 14th I forked the project maintained by @TheOldPresbyope and started to redevelop the code of the two main scripts and add few other pieces of code.
+
 ## Design Intent
 
 We intend the moOde CD playback function to mimic the behavior of a standalone CD player.
 
-When an audio CD is inserted in the drive, moOde playback stops, the moOde queue is cleared and then loaded with a track list corresponding to the audio tracks on the CD. The user can play the tracks in the normal way. When the CD is ejected, using the manual eject button on the drive, playback stops and the queue is cleared. In particular, moOde retains no memory of the CD or its tracks. Saving a track as a favorite or setting it for clock radio will lead to an error later when moOde attempts to play it.
+When an audio CD is inserted in the drive, the new CD is inspected and a playlist is built from its content.
+The moOde playback stops, the moOde queue is cleared and then the playlist is loaded and played. 
+When the CD is ejected, using the manual eject button on the drive, playback stops and the playlist and the queue are cleared. 
+In particular, moOde retains no memory of the CD or its tracks. Saving a track as a favorite or setting it for clock radio 
+will lead to an error later when moOde attempts to play it. Nevertheless the generated playlist is saved in a cache directory
+and can be quickly copied for a new use if the CD is inserted again later on.
 
 ## Responsiveness
 
@@ -39,11 +46,14 @@ Once extracted, on the other hand, an audio CD track is played back at 44.1KHz/1
 
 ## Planned Evolution of Releases
 
-In Version 0 (the current release), the CD track list consists of primitive "cdda:///1", cdda:///2", etc., entries. The default moOde logo is displayed for all tracks, and, for each track played, the information displayed below the logo is an ugly "File does not exist" and "Unknown artist - Unknown album"
+In Version 0 (the orginal release by @TheOldPresbyope), the CD track list consists of primitive "cdda:///1", cdda:///2", etc., entries. 
+The default moOde logo is displayed for all tracks, and, for each track played, the information displayed below the logo is an ugly 
+"File does not exist" and "Unknown artist - Unknown album"
 
-Version 1 (~~in progress~~), is a prettified Version 0. The track list consists of "CD Track 1", "CD Track 2", etc., entries. A CDDA logo is displayed for all tracks, and the information displayed below the logo is sanitized.
+Version EC1 is able to extract the track metadata from the CD text or MusicBrainz. But the information displayed below the logo is still ugly.
 
-In Version 2 (still a pipe dream), external data services are queried to obtain actual track information and CD coverart. Given the current state of these data services, the results may be reasonably good for some genres and hit-or-miss for others.
+My plan to the next version is to diisplay correctly information displayed below the logo and perhaps display the cover of the disk as logo when
+available
 
 ## Installation
 
@@ -66,12 +76,9 @@ Good listening!
 ### Hardware
 
 This code was developed on the following system
-- moOde 6.4.0
-- RPi4B
-- LG "Slim Portable DVD Writer" model GP65NB60 [purchased new on-line for under US$30]
-- Canakit 5v/3.0a Raspberry Pi AC adapter with USB-C ouput
-
-A powered USB hub did not seem to be necessary with this hardware combination (no problems loading a CD or starting a track), but it may be necessary with more peripherals attached, with other optical-drive models, or with other RPi models. If in doubt, use a powered hub. 
+- moOde 7.2.1
+- RPi3B
+- DVD player : HL-DT-ST DVDRAM GT30N [purchased new on-line for less than 20€]. It is a bit too noisy
 
 ### SoX
 
