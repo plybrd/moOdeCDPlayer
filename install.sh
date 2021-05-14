@@ -1,4 +1,7 @@
-echo "Install V0 moOdeCDPlay files in moOde."
+#!/bin/bash
+
+echo "Install V-EC1 moOdeCDPlay files in moOde."
+
 # moOdeCDPlay V0.1 script
 if [ ! -f /var/www/command/moode.php ]; then
     echo
