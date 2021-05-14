@@ -14,7 +14,7 @@ This work began as a contribution to the moOde project from Ashley Cox (https://
 
 Similar work is described in https://github.com/TongboZhang/Moode_Extension. See additional links there.
 
-On May the 14th I forked the project maintained by @TheOldPresbyope and started to redevelop the code of the two main scripts and add few other pieces of code.
+On May the 14th I forked the project maintained by [TheOldPresbyope](https://github.com/TheOldPresbyope) and started to redevelop the code of the two main scripts and add few other pieces of code.
 
 ## Design Intent
 
@@ -46,13 +46,13 @@ Once extracted, on the other hand, an audio CD track is played back at 44.1KHz/1
 
 ## Planned Evolution of Releases
 
-In Version 0 (the orginal release by @TheOldPresbyope), the CD track list consists of primitive "cdda:///1", cdda:///2", etc., entries. 
+In Version 0 (the orginal release by [TheOldPresbyope](https://github.com/TheOldPresbyope)), the CD track list consists of primitive "cdda:///1", cdda:///2", etc., entries. 
 The default moOde logo is displayed for all tracks, and, for each track played, the information displayed below the logo is an ugly 
 "File does not exist" and "Unknown artist - Unknown album"
 
 Version EC1 is able to extract the track metadata from the CD text or MusicBrainz. But the information displayed below the logo is still ugly.
 
-My plan to the next version is to diisplay correctly information displayed below the logo and perhaps display the cover of the disk as logo when
+My aim for the next version would be to display correctly information displayed below the logo and perhaps display the cover of the disk as logo when
 available
 
 ## Installation
