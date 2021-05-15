@@ -2,7 +2,6 @@
 
 #clear the queue
 /usr/bin/mpc -q clear
-rm -f /var/lib/mpd/playlists/CDPlayer.m3u
 
 #The CD is ejected automatically when
 # the system detects the eject button is pressed.
