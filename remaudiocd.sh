@@ -3,6 +3,8 @@
 #clear the queue
 /usr/bin/mpc -q clear
 
+rm -f /var/local/www/imagesw/current_cd
+
 #The CD is ejected automatically when
 # the system detects the eject button is pressed.
 # The following ensures it can be ejected

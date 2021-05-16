@@ -11,6 +11,16 @@ import re
 import pathlib
 import itertools
 import json
+import os
+import copy
+import requests
+import glob
+import shutil
+
+def file_copy(source, target):
+    assert source.is_file()
+    shutil.copy(str(source), str(target))  # str() only there for Python < (3, 6)
+
 
 class Error(Exception):
     """Base class for exceptions in this module."""
@@ -20,6 +30,9 @@ class NotCDDAError(Error):
     """Error raised if the inserted CD is not an audio CD."""
     pass
 
+
+def current_disc():
+    return libdiscid.read(libdiscid.default_device())
 
 
 def hex_cdid(disc) :
@@ -56,19 +69,25 @@ def read_cached_info(disc):
     return metadata
 
 def write_info_in_cache(disc,metadata):
-    directory = cache_dir(disc)
-    try:
-        if not directory.exists():
-            directory.mkdir()
-        json_file = cache_info(disc)
+    if metadata['source'] != 'default':
+        directory = cache_dir(disc)
+        try:
+            if not directory.exists():
+                directory.mkdir()
+            json_file = cache_info(disc)
 
-        with json_file.open(mode="wt") as f:
-            json.dump(metadata,f)
-    except Exception as e:
-        print(e)
+            with json_file.open(mode="wt") as f:
+                json.dump(metadata,f)
+        except Exception as e:
+            print(e)
+
+def is_cached_metadata(disc):
+    return cache_info(disc).exists()
 
 def itrack(disc):
-    return (str(i) for i in range(disc.first_track,disc.last_track))
+    return (str(i) for i in range(disc.first_track,disc.last_track+1))
+
+
 
 def info_from_cdtext(disc):
     try:
@@ -89,7 +108,9 @@ def info_from_cdtext(disc):
                         if t.get(i,0) is not None}
 
     if "TITLE" in album_info:
-        disc_info = {"album" : album_info["TITLE"]}
+        disc_info = {"source" : "CDText",
+                     "album" : album_info["TITLE"]
+                    }
 
         if "PERFORMER" in album_info:
             disc_info["albumartist"]=album_info["PERFORMER"]
@@ -136,22 +157,97 @@ def info_from_cdtext(disc):
 
     return disc_info
 
-def info_from_musicbrainz(disc):
+def get_musicbrainz_release(disc):
     mb.set_useragent(app='get-contents', version='0.1')
-    release = mb.get_releases_by_discid(disc.id,
-                                        includes=['artists', 'recordings'])
 
-    if release.get('disc'):
+    try:
+        release = mb.get_releases_by_discid(disc.id,
+                                            includes=['artists', 'recordings'])
+    except ResponseError:
+        release = None
+
+    if release is not None and "disc" in release:
         this_release=release['disc']['release-list'][0]
+    else:
+        this_release=None
+ 
+    return this_release
+
+def save_musicbrainz_cover(disc,release):
+    saved = False
+
+    if release['cover-art-archive']['artwork'] == 'true':
+        url = 'http://coverartarchive.org/release/' + release['id']
+        art = json.loads(requests.get(url, allow_redirects=True).content)
+
+        for image in art['images']:
+            if image['front'] == True:
+                cover = requests.get(image['image'], 
+                                        allow_redirects=True)
+
+                directory = cache_dir(disc)
+                try:
+                    if not directory.exists():
+                        directory.mkdir()
+                    filename=pathlib.Path(directory,hex_cdid(disc) + ".jpg")
+                    with filename.open(mode='wb') as f:
+                        f.write(cover.content)
+                        f.close()
+                        saved = True
+                except:
+                    pass
+                break
+
+    return saved
+
+
+
+def get_cover(disc, only_from_cache=False):
+    directory = cache_dir(disc)
+    filename=pathlib.Path(directory,hex_cdid(disc) + ".jpg")
+
+    if filename.exists():
+        return filename
+
+    if not only_from_cache:
+        release = get_musicbrainz_release(disc)
+        if save_musicbrainz_cover(disc,release):
+            return filename
+
+    return None
+
+def install_cover(disc, only_from_cache=False):
+
+    cover = get_cover(disc,only_from_cache)
+    dest = pathlib.Path("/var/local/www/imagesw/current_cd")
+
+    if cover is not None:
+        source = cache_dir(disc)
+    else:
+        source = pathlib.Path("/var/lib/moode_cd_library/default_cd")
+       
+    if dest.exists() :
+        dest.unlink()
+    dest.symlink_to(source)
+
+
+def info_from_musicbrainz(disc):
+    this_release = get_musicbrainz_release(disc)
+
+    if this_release is not None:
         title = this_release['title']
         artist = this_release['artist-credit'][0]['artist']['name']
 
-        metadata = {"album"       : title,
+
+        metadata = {"source" : "musicbrainz",
+                     "album"       : title,
                      "albumartist" : artist,
                      "tracks"      : {}
                     }
 
         tracks_info = metadata["tracks"]
+
+        # album,genre,track,disc,date,composer,conductor,performer,encoded
 
         for medium in this_release['medium-list']:
             for this_disc in medium['disc-list']:
@@ -169,13 +265,16 @@ def info_from_musicbrainz(disc):
                         
                     break
 
+        save_musicbrainz_cover(disc,this_release)        
+
     else:
         metadata = None
     
     return metadata
 
 def info_default(disc):
-    metadata = {"album"       : "Unkown",
+    metadata = {"source"      : "default",
+                "album"       : "Unkown",
                 "albumartist" : "Unkown",
                 "tracks"      : {}
                }
@@ -183,11 +282,12 @@ def info_default(disc):
     tracks_info = metadata["tracks"]
     
     for track in itrack(disc):
-        tracks_info[i] = {"track" : id,   
+        tracks_info[track] = {
+                          "track" : track,   
                           "artist": "Unkown",
                           "album" : "Unkown",
-                          "name"  : "Track {}".format(track['number']),
-                          "title" : "Track {}".format(track['number'])
+                          "name"  : "Track {}".format(track),
+                          "title" : "Track {}".format(track)
                          }
 
     return metadata
@@ -214,6 +314,66 @@ def cd_info(disc):
 
     return metadata
 
+def fast_info(disc):
+    metadata = read_cached_info(disc)
+    method = "cached"
+    if metadata is None:
+        metadata = info_from_cdtext(disc)
+        method = "cdtext"
+    if metadata is None:
+        metadata = info_default(disc)
+        method = "default"
+    return method,metadata
+
+def dict_diff(old,new,excepted=[]):
+    updated = {}
+    for k in new:
+        if k not in excepted:
+            if k in old:
+                if type(old[k]) == dict and type(new[k]) == dict:
+                    up_k = dict_diff(old[k],new[k],excepted)
+                    if (len(up_k) > 0):
+                        updated[k] = up_k
+                elif new[k]!=old[k]:
+                    updated[k] = new[k]
+
+    return updated
+
+def update_with_musicbrainz(disc,metadata):
+    """
+    Updates the medata structure with data from musicbrainz
+    and returns the dict of modified values.
+    The metadata input dictionnary is potentially modified.
+    """
+    # Save the orginal metadata
+    metadata_old = copy.deepcopy(metadata)
+
+    # load the metadata from musicmrainz
+    mb_metadata = info_from_musicbrainz(disc)
+
+    # musicmrainz returns metadata update the old ones.
+    if mb_metadata is not None:
+        metadata.update(mb_metadata)
+
+        # Looks for updated metadata
+        updated=dict_diff(metadata_old,metadata, excepted=["source"])
+
+        # if we update nothing except the source them
+        # switch back the source
+        if len(updated) == 0:
+            metadata["source"] = metadata_old["source"]
+        else:
+            updated["source"] = metadata["source"]
+    else:
+        updated = {}
+
+    # returns the list of updated field
+    return updated
+
+
+def metadata_source(metadata):
+    return metadata["source"]
+
 def eventually_mpd_connect(mpd,host="localhost", port=6600):
     try:
         mpd.connect(host,port)
@@ -222,37 +382,87 @@ def eventually_mpd_connect(mpd,host="localhost", port=6600):
 
 
 def md_push_disc(disc, autoplay=True, host="localhost", port=6600):
-    m = mpd.MPDClient()
 
+    # Load metadata that can be loaded quickly
+    method,metadata = fast_info(disc)
+
+    # save the metadata if they are not feteched from cache
+    if method != "cached":
+        write_info_in_cache(disc,metadata)
+
+    install_cover(disc, only_from_cache=True)
+
+    m = mpd.MPDClient()
     eventually_mpd_connect(m,host,port)
+
+
+    # Sends the disc tracks to MPD
     m.clear()
     track_ids = {i : m.addid("cdda:///{}".format(i))
                   for i in itrack(disc)
                 }
 
+    m.command_list_ok_begin()
+    # And annote the track with the first set of metadata
+    for i in metadata["tracks"]:
+        for k in metadata["tracks"][i]:
+           m.addtagid(track_ids[i],k,metadata["tracks"][i][k])
+
+    m.command_list_end()
+
+    # If in autoplay mode launch the playlist
     if autoplay:
         eventually_mpd_connect(m,host,port)
         m.single(0)
         m.repeat(0)
         m.play()
 
-    metadata = cd_info(disc)
 
-    if metadata is not None:
-        eventually_mpd_connect(m,host,port)
-        for i in itrack(disc):
-            for k in metadata["tracks"][i]:
-                m.addtagid(track_ids[i],k,metadata["tracks"][i][k])
-            
+    # Check for update of the musicbrainz data
+    updated = update_with_musicbrainz(disc,metadata)
+    install_cover(disc, only_from_cache=False)
+
+    eventually_mpd_connect(m,host,port)
+    current_info = {s["track"]:s for s in m.playlistinfo()}
+
+    m.command_list_ok_begin()
+    
+    for i in metadata["tracks"]:
+        current = current_info[i]
+        for k in metadata["tracks"][i]:
+            if k in current:
+                m.cleartagid(track_ids[i],k)
+            m.addtagid(track_ids[i],k,metadata["tracks"][i][k])
+        
+    m.command_list_end()
+
+    if updated:
+        write_info_in_cache(disc,metadata)
+        # if "tracks" in updated:
+
+
+        #     current_info = {s["track"]:s for s in m.playlistinfo()}
+
+        #     m.command_list_ok_begin()
+
+        #     for i in updated["tracks"]:
+        #         current = current_info[i]
+        #         for k in updated["tracks"][i]:
+        #             if k in current:
+        #                 m.cleartagid(track_ids[i],k)
+        #             m.addtagid(track_ids[i],k,updated["tracks"][i][k])
+
+        #     m.command_list_end()
+
+        # saved the updated version of metadata
+
 
 
 
     
 
-
-
 if __name__ == "__main__" :
 
-    disc = libdiscid.read(libdiscid.default_device())
+    disc = current_disc()
     md_push_disc(disc)
 
