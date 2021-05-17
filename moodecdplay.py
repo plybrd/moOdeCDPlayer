@@ -16,6 +16,7 @@ import copy
 import requests
 import glob
 import shutil
+import hashlib
 
 def file_copy(source, target):
     assert source.is_file()
@@ -133,7 +134,7 @@ def info_from_cdtext(disc):
         tracks_info[track] = {"track" : track,
                               "album" : disc_info["album"],
                               "name"  : "Track {}".format(track),
-                              "title" : track_info["TITLE"] if "TITLE" in track_info else "Unkown"
+                              "title" : track_info["TITLE"] if "TITLE" in track_info else "Unknown"
                              }
         
         if "GENRE" in track_info:
@@ -152,7 +153,7 @@ def info_from_cdtext(disc):
         elif "COMPOSER" in track_info:
             tracks_info[track]["artist"] = track_info["COMPOSER"]
         else:
-            tracks_info[track]["artist"] = "Unkown"
+            tracks_info[track]["artist"] = "Unknown"
                                     
 
     return disc_info
@@ -226,10 +227,19 @@ def install_cover(disc, only_from_cache=False):
     else:
         source = pathlib.Path("/var/lib/moode_cd_library/default_cd")
        
-    if dest.exists() :
+    if dest.is_symlink() :
         dest.unlink()
     dest.symlink_to(source)
 
+    theme_jpg = pathlib.Path("/var/local/www/imagesw/thmcache",hashlib.md5(b"cdda://").hexdigest() + ".jpg")
+    if theme_jpg.is_symlink() :
+        theme_jpg.unlink()
+    theme_jpg.symlink_to(list(dest.glob("*.jpg"))[0])
+
+    theme_sm_jpg = pathlib.Path("/var/local/www/imagesw/thmcache",hashlib.md5(b"cdda://").hexdigest() + "_sm.jpg")
+    if theme_sm_jpg.is_symlink() :
+            theme_sm_jpg.unlink()
+        theme_sm_jpg.symlink_to(list(dest.glob("*.jpg"))[0])
 
 def info_from_musicbrainz(disc):
     this_release = get_musicbrainz_release(disc)
@@ -274,8 +284,8 @@ def info_from_musicbrainz(disc):
 
 def info_default(disc):
     metadata = {"source"      : "default",
-                "album"       : "Unkown",
-                "albumartist" : "Unkown",
+                "album"       : "Unknown",
+                "albumartist" : "Unknown",
                 "tracks"      : {}
                }
     
@@ -284,8 +294,8 @@ def info_default(disc):
     for track in itrack(disc):
         tracks_info[track] = {
                           "track" : track,   
-                          "artist": "Unkown",
-                          "album" : "Unkown",
+                          "artist": "Unknown",
+                          "album" : "Unknown",
                           "name"  : "Track {}".format(track),
                           "title" : "Track {}".format(track)
                          }

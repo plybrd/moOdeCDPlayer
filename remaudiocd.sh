@@ -4,6 +4,8 @@
 /usr/bin/mpc -q clear
 
 rm -f /var/local/www/imagesw/current_cd
+rm -f "/var/local/www/imagesw/thmcache/$(echo -n "cdda://" | md5sum | awk '{print $1}').jpg"
+rm -f "/var/local/www/imagesw/thmcache/$(echo -n "cdda://" | md5sum | awk '{print $1}')_sm.jpg"
 
 #The CD is ejected automatically when
 # the system detects the eject button is pressed.
