@@ -485,6 +485,12 @@ def md_push_disc(disc, autoplay=True, host="localhost", port=6600):
         # saved the updated version of metadata
 
 
+def on_insert(disc):
+    md_push_disc(disc)
+
+def on_eject(disc):
+    pass
+
 
 
     
@@ -498,10 +504,21 @@ if __name__ == "__main__" :
                              metavar="FILE",
                              default=DEFAULT_CONFIG)
 
+    option_parser.add_option("-e", "--on-eject", 
+                             dest="action",
+                             action="store_const",
+                             const=on_eject()
+                             help="To run the actions to be done on CD eject", 
+                             default=md_push_disc)
+
+    
+
     (options, args) = option_parser.parse_args()
 
     config = read_config(options.configfile)
 
     disc = current_disc()
+
+    if 
     md_push_disc(disc)
 
