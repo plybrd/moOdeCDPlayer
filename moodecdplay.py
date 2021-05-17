@@ -15,12 +15,12 @@ import os
 import copy
 import requests
 import glob
-import shutil
 import hashlib
+import configparser
+import optparse
 
-def file_copy(source, target):
-    assert source.is_file()
-    shutil.copy(str(source), str(target))  # str() only there for Python < (3, 6)
+
+DEFAULT_CONFIG = "/etc/moodecdplay.conf"
 
 
 class Error(Exception):
@@ -30,6 +30,24 @@ class Error(Exception):
 class NotCDDAError(Error):
     """Error raised if the inserted CD is not an audio CD."""
     pass
+
+
+def read_config(configfile=DEFAULT_CONFIG):
+
+    __default__ ="""
+    [Playback]
+    Autoplay = Yes
+
+    [Metadata]
+    Use_musicbrainz = Yes
+    Cache_metadata = Yes
+    """
+    config = configparser.ConfigParser()
+    config.read_string(__default__)
+    configfile = pathlib.Path(configfile)
+    if configfile.exists():
+        config.read(configfile)
+    return config
 
 
 def current_disc():
@@ -238,8 +256,8 @@ def install_cover(disc, only_from_cache=False):
 
     theme_sm_jpg = pathlib.Path("/var/local/www/imagesw/thmcache",hashlib.md5(b"cdda://").hexdigest() + "_sm.jpg")
     if theme_sm_jpg.is_symlink() :
-            theme_sm_jpg.unlink()
-        theme_sm_jpg.symlink_to(list(dest.glob("*.jpg"))[0])
+        theme_sm_jpg.unlink()
+    theme_sm_jpg.symlink_to(list(dest.glob("*.jpg"))[0])
 
 def info_from_musicbrainz(disc):
     this_release = get_musicbrainz_release(disc)
@@ -472,6 +490,17 @@ def md_push_disc(disc, autoplay=True, host="localhost", port=6600):
     
 
 if __name__ == "__main__" :
+
+    option_parser = optparse.OptionParser()
+    option_parser.add_option("-c", "--config", 
+                             dest="configfile",
+                             help="location of the configuration file", 
+                             metavar="FILE",
+                             default=DEFAULT_CONFIG)
+
+    (options, args) = option_parser.parse_args()
+
+    config = read_config(options.configfile)
 
     disc = current_disc()
     md_push_disc(disc)
