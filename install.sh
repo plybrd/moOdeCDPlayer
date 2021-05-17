@@ -18,15 +18,16 @@ sudo apt -y install libcdio-utils \
 
 sudo pip3 install -U pycdio
 sudo pip3 install -U python-mpd2
+
 sudo cp addaudiocd.sh /usr/local/bin/addaudiocd.sh
 sudo cp remaudiocd.sh /usr/local/bin/remaudiocd.sh
-sudo cp moodecdplay.py /usr/local/bin/moodecdplay.py
+sudo cp moodecdplayer.py /usr/local/bin/moodecdplayer
 sudo cp addaudiocd.service /etc/systemd/system/addaudiocd.service
 sudo cp remaudiocd.service /etc/systemd/system/remaudiocd.service
 sudo cp 99-srX.rules /etc/udev/rules.d/99-srX.rules
 sudo chmod +x /usr/local/bin/addaudiocd.sh
 sudo chmod +x /usr/local/bin/remaudiocd.sh
-sudo chmod +x /usr/local/bin/moodecdplay.py
+sudo chmod +x /usr/local/bin/moodecdplayer
 
 #if [[ ! -f /var/www/coverart.php.ori ]] ; then
 #    sudo cp /var/www/coverart.php /var/www/coverart.php.ori

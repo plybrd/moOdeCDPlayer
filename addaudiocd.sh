@@ -11,4 +11,4 @@ else
   exit 1
 fi
 
-moodecdplay.py
+moodecdplayer --on-insert

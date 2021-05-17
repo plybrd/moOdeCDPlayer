@@ -18,10 +18,22 @@ import glob
 import hashlib
 import configparser
 import optparse
+import sys
 
 
+##
+## Default values
+##
+
+# The default place for the config file
 DEFAULT_CONFIG = "/etc/moodecdplay.conf"
 
+##
+## List of the error code leading to an abortion of the process
+##
+
+# There is no audio CD in the player
+NO_AUDIO_CD_ERROR = 1
 
 class Error(Exception):
     """Base class for exceptions in this module."""
@@ -32,11 +44,15 @@ class NotCDDAError(Error):
     pass
 
 
-def read_config(configfile=DEFAULT_CONFIG):
+def read_config(options):
 
     __default__ ="""
-    [Playback]
+    [On CD insertion]
     Autoplay = Yes
+    Clear_queue = Yes
+
+    [On CD ejection]
+    Clear_queue = No
 
     [Metadata]
     Use_musicbrainz = Yes
@@ -44,19 +60,50 @@ def read_config(configfile=DEFAULT_CONFIG):
     """
     config = configparser.ConfigParser()
     config.read_string(__default__)
-    configfile = pathlib.Path(configfile)
+    configfile = pathlib.Path(options.configfile)
     if configfile.exists():
         config.read(configfile)
     return config
 
 
 def current_disc():
-    return libdiscid.read(libdiscid.default_device())
+    """
+    Returns the disc information corresponding to the disc
+    currently insterted into the default USB player.
+    
+    It contains among other data, the musicbrainz disc id
+    and the number of tracks.
+    """
+
+    try:
+        d = cdio.Device(driver_id=pycdio.DRIVER_UNKNOWN)
+    except IOError as err:
+        d = None
+
+    if d is not None :
+        try:
+            if d.get_disc_mode() == 'CD-DA':
+                d = libdiscid.read(libdiscid.default_device())
+            else:
+                d = None
+        except :
+            d = None
+
+    return d
 
 
 def hex_cdid(disc) :
     """
-    returns the CD as an hexadecimal string.
+    returns the musicBrainz CD is as an hexadecimal string.
+
+    The original code is taken by two letters and the ascii
+    code of each letters is converted to hexadecimal.
+
+    the original code : QMSaDuuKtKVWKD_cimSlvt2on5o-
+    is converted into :
+        514d-5361-4475-754b-744b-5657-4b44-5f63-696d-536c-7674-326f-6e35-6f2d
+
+    That code is used to generate file names in moodecdplayer 
     """
     hexa = [hex(ord(i)).lstrip("0x").rstrip("L") 
                 for i in disc.id
@@ -74,10 +121,32 @@ def cache_dir(disc):
     p = pathlib.Path(cd_library, hex_cdid(disc))
     return p
 
+def moode_cd_dir(disc):
+    return pathlib.Path("/var/local/www/imagesw/current_cd")
+
+def default_cd_dir(disc):
+    return pathlib.Path("/var/lib/moode_cd_library/default_cd")
+
+
 def cache_info(disc):
     p = cache_dir(disc)
     p = pathlib.Path(p,"cd_info.json")
     return p
+
+def cover_file(disc):
+    p = cache_dir(disc)
+    p = pathlib.Path(p,hex_cdid(disc) + ".jpg")
+    return p
+
+def theme_jpg_file(disc):
+    filename = hashlib.md5(b"cdda://").hexdigest() + ".jpg"
+    return pathlib.Path("/var/local/www/imagesw/thmcache",filename)
+
+def theme_sm_jpg_file(disc):
+    filename = hashlib.md5(b"cdda://").hexdigest() + "_sm.jpg"
+    return pathlib.Path("/var/local/www/imagesw/thmcache",filename)
+
+
 
 def read_cached_info(disc):
     json_file = cache_info(disc)
@@ -182,7 +251,7 @@ def get_musicbrainz_release(disc):
     try:
         release = mb.get_releases_by_discid(disc.id,
                                             includes=['artists', 'recordings'])
-    except ResponseError:
+    except mb.ResponseError:
         release = None
 
     if release is not None and "disc" in release:
@@ -208,7 +277,7 @@ def save_musicbrainz_cover(disc,release):
                 try:
                     if not directory.exists():
                         directory.mkdir()
-                    filename=pathlib.Path(directory,hex_cdid(disc) + ".jpg")
+                    filename=cover_file(disc)
                     with filename.open(mode='wb') as f:
                         f.write(cover.content)
                         f.close()
@@ -222,42 +291,61 @@ def save_musicbrainz_cover(disc,release):
 
 
 def get_cover(disc, only_from_cache=False):
-    directory = cache_dir(disc)
-    filename=pathlib.Path(directory,hex_cdid(disc) + ".jpg")
+    filename=cover_file(disc)
 
     if filename.exists():
         return filename
 
     if not only_from_cache:
         release = get_musicbrainz_release(disc)
-        if save_musicbrainz_cover(disc,release):
+        if release is not None and save_musicbrainz_cover(disc,release):
             return filename
 
     return None
 
 def install_cover(disc, only_from_cache=False):
+    """
+    Installs the symbolic links in the moOde directories
+    making the cover arts accessible for the web site.
+    """
 
     cover = get_cover(disc,only_from_cache)
-    dest = pathlib.Path("/var/local/www/imagesw/current_cd")
+    dest  = moode_cd_dir(disc)
 
     if cover is not None:
         source = cache_dir(disc)
     else:
-        source = pathlib.Path("/var/lib/moode_cd_library/default_cd")
+        source = default_cd_dir(disc)
        
     if dest.is_symlink() :
         dest.unlink()
     dest.symlink_to(source)
 
-    theme_jpg = pathlib.Path("/var/local/www/imagesw/thmcache",hashlib.md5(b"cdda://").hexdigest() + ".jpg")
+    theme_jpg = theme_jpg_file(disc)
     if theme_jpg.is_symlink() :
         theme_jpg.unlink()
     theme_jpg.symlink_to(list(dest.glob("*.jpg"))[0])
 
-    theme_sm_jpg = pathlib.Path("/var/local/www/imagesw/thmcache",hashlib.md5(b"cdda://").hexdigest() + "_sm.jpg")
+    theme_sm_jpg = theme_sm_jpg_file(disc)
     if theme_sm_jpg.is_symlink() :
         theme_sm_jpg.unlink()
     theme_sm_jpg.symlink_to(list(dest.glob("*.jpg"))[0])
+
+def uninstall_cover(disc):
+    """
+    Removes the symbolic links in the moOde directories
+    making the cover arts accessible for the web site.
+    """
+    if moode_cd_dir(disc).is_symlink():
+        moode_cd_dir(disc).unlink()
+
+    if theme_jpg_file(disc).is_symlink():
+        theme_jpg_file(disc).unlink()
+
+    if theme_sm_jpg_file(disc).is_symlink():
+        theme_sm_jpg_file(disc).unlink()
+
+
 
 def info_from_musicbrainz(disc):
     this_release = get_musicbrainz_release(disc)
@@ -320,19 +408,6 @@ def info_default(disc):
 
     return metadata
 
-def build_info(disc):
-    
-    metadata = info_from_cdtext(disc)
-    if metadata is None:
-        metadata = info_from_musicbrainz(disc)
-
-    if metadata is not None:
-        write_info_in_cache(disc,metadata)
-    else:
-        metadata = info_default(disc)
-
-    return metadata
-
 
 def cd_info(disc):
 
@@ -369,7 +444,7 @@ def dict_diff(old,new,excepted=[]):
 
 def update_with_musicbrainz(disc,metadata):
     """
-    Updates the medata structure with data from musicbrainz
+    Updates the metadata structure with data from musicbrainz
     and returns the dict of modified values.
     The metadata input dictionnary is potentially modified.
     """
@@ -408,8 +483,53 @@ def eventually_mpd_connect(mpd,host="localhost", port=6600):
     except:
         pass
 
+def mpd_queue_info(host="localhost", port=6600):
+    """
+    Returns the list of the CD tracks present in the MPD queue.
+    """
+    m = mpd.MPDClient()
 
-def md_push_disc(disc, autoplay=True, host="localhost", port=6600):
+    error=True
+    while(error):
+        error = False
+        eventually_mpd_connect(m,host,port)
+        try:
+            info = {s["file"].split("/")[-1] : s 
+                     for s in m.playlistinfo()
+                     if s['file'][0:8]=="cdda:///"}
+        except mpd.ConnectionError:
+            error=True
+    
+    return info
+
+def mpd_clear_cd_tracks(host="localhost", port=6600):
+    """
+    Remove every CD tracks from the MPD queue
+
+    If one of the CD tracks was playing then a STOP command
+    is sent before deleting the tracks.
+    """
+    m = mpd.MPDClient()
+    eventually_mpd_connect(m,host,port)
+
+    current_info = mpd_queue_info(host,port)
+
+    cdtracks = [current_info[k]['id'] 
+                    for k in current_info]
+
+    cs = m.currentsong()
+
+    if "id" in cs and cs['id'] in cdtracks:
+        m.stop()
+
+    m.command_list_ok_begin()
+    for k in cdtracks:
+        m.deleteid(int(k))
+    m.command_list_end()
+
+
+
+def mpd_load_disc(disc, autoplay=True, host="localhost", port=6600):
 
     # Load metadata that can be loaded quickly
     method,metadata = fast_info(disc)
@@ -485,17 +605,29 @@ def md_push_disc(disc, autoplay=True, host="localhost", port=6600):
         # saved the updated version of metadata
 
 
-def on_insert(disc):
-    md_push_disc(disc)
 
-def on_eject(disc):
+
+
+def on_insert(disc, host="localhost", port=6600):
+    mpd_load_disc(disc,port)
+
+def on_eject(disc, host="localhost", port=6600):
+    mpd_clear_cd_tracks(host,port)
+    uninstall_cover(disc)
+
+def save_config(disc, host="localhost", port=6600):
     pass
+
 
 
 
     
 
 if __name__ == "__main__" :
+
+    ##
+    ## Declares the script options
+    ##
 
     option_parser = optparse.OptionParser()
     option_parser.add_option("-c", "--config", 
@@ -504,20 +636,55 @@ if __name__ == "__main__" :
                              metavar="FILE",
                              default=DEFAULT_CONFIG)
 
+
+    ##
+    ## Inserts every options corresponding to the command to execute
+    ##
+
+    #--> The On eject command
+
     option_parser.add_option("-e", "--on-eject", 
                              dest="action",
                              action="store_const",
                              const=on_eject,
                              help="To run the actions to be done on CD eject", 
-                             default=md_push_disc)
+                             default=on_insert)
 
-    
+    #--> The On insert command
+
+    option_parser.add_option("-i", "--on-insert", 
+                             dest="action",
+                             action="store_const",
+                             const=on_insert,
+                             help="To run the actions to be done on CD insertion", 
+                             default=on_insert)
+
+    #--> The Save config command
+
+    option_parser.add_option("-s", "--save-config", 
+                             dest="action",
+                             action="store_const",
+                             const=save_config,
+                             help="Save the default version of the config file", 
+                             default=on_insert)
+
 
     (options, args) = option_parser.parse_args()
 
-    config = read_config(options.configfile)
+
+    ##
+    ## Check that an Audio CD is inserted into the default player 
+    ##
 
     disc = current_disc()
+    if disc is None:
+        print("No Audio CD in the drive", file=sys.stderr,flush=True)
 
-    md_push_disc(disc)
 
+
+    config = read_config(options)
+
+    options.action(disc,host="localhost",port=6600)
+
+    if disc is None:
+        sys.exit(NO_AUDIO_CD_ERROR)
