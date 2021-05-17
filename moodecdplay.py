@@ -507,7 +507,7 @@ if __name__ == "__main__" :
     option_parser.add_option("-e", "--on-eject", 
                              dest="action",
                              action="store_const",
-                             const=on_eject()
+                             const=on_eject,
                              help="To run the actions to be done on CD eject", 
                              default=md_push_disc)
 
@@ -519,6 +519,5 @@ if __name__ == "__main__" :
 
     disc = current_disc()
 
-    if 
     md_push_disc(disc)
 
