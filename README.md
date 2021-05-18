@@ -14,20 +14,21 @@ This work began as a contribution to the moOde project from Ashley Cox (https://
 
 Similar work is described in https://github.com/TongboZhang/Moode_Extension. See additional links there.
 
-On May the 14th I forked the project maintained by [TheOldPresbyope](https://github.com/TheOldPresbyope) and started to redevelop the code of the two main scripts and add few other pieces of code.
+On May 14, 2021, I forked the moOdeCDPlayer project maintained by [TheOldPresbyope] (https://github.com/TheOldPresbyope) and started redeveloping the code of the two main scripts and adding a few other pieces of code. During the following long weekend I completely rewrote the main scripts and replaced them with a python application `moodecdplayer`. Due to the very low similarity of the new code to Kent's original ([TheOldPresbyope](https://github.com/TheOldPresbyope)), and to remove any confusion between the two now separate projects, I renamed the moOdeCDPlay repository to moOdeCDPlayer.
 
 ## Design Intent
 
 We intend the moOde CD playback function to mimic the behavior of a standalone CD player.
 
-When an audio CD is inserted in the drive, the new CD is inspected and a playlist is built from its content.
-The moOde playback stops, the moOde queue is cleared and then the playlist is loaded and played. 
-When the CD is ejected, using the manual eject button on the drive, playback stops and the playlist and the queue are cleared. 
-In particular, moOde retains no memory of the CD or its tracks. Saving a track as a favorite or setting it for clock radio 
-will lead to an error later when moOde attempts to play it. Nevertheless the generated playlist is saved in a cache directory
-and can be quickly copied for a new use if the CD is inserted again later on.
+When an audio CD is inserted into the player, the new CD is inspected and the MPD queue is filled with its tracks.
+
+When the CD is ejected, using the player's manual eject button, the items corresponding to the CD are removed from the MPD queue. If any of the tracks on the CD were playing, the playback will stop. 
+
+After the CD is ejected, *moOde* only keeps the metadata of the CD tracks and the album art in a cache. This is done to speed up the next play of the same CD. The music on the CD is not stored on the raspberry. So saving a track as a favorite or setting it on the clock radio will result in an error later when moOde tries to play it. 
 
 ## Responsiveness
+
+This responsiveness was estimated by previous developpers. I never timed them again. But that information can be useful for people not used to listen this old fashionned music devices.
 
 An optical CD drive is very slow compared to other storage devices. Then, too, the nature of the CDDA (compact disk digital audio) encoding complicates retrieving audio tracks from the CD. In addition, there is internal buffering involved.
 
@@ -46,14 +47,12 @@ Once extracted, on the other hand, an audio CD track is played back at 44.1KHz/1
 
 ## Planned Evolution of Releases
 
-In Version 0 (the orginal release by [TheOldPresbyope](https://github.com/TheOldPresbyope)), the CD track list consists of primitive "cdda:///1", cdda:///2", etc., entries. 
-The default moOde logo is displayed for all tracks, and, for each track played, the information displayed below the logo is an ugly 
-"File does not exist" and "Unknown artist - Unknown album"
+- In Version 0 (the orginal release by [TheOldPresbyope](https://github.com/TheOldPresbyope)), the CD track list consists of primitive "cdda:///1", cdda:///2", etc., entries. 
+  The default moOde logo is displayed for all tracks, and, for each track played, the information displayed below the logo is an ugly 
+  "File does not exist" and "Unknown artist - Unknown album"
 
-Version EC1 is able to extract the track metadata from the CD text or MusicBrainz. But the information displayed below the logo is still ugly.
-
-My aim for the next version would be to display correctly information displayed below the logo and perhaps display the cover of the disk as logo when
-available
+- Version EC1 is able to extract the track metadata from the CD text or MusicBrainz. But the information displayed below the logo is still ugly.
+- Version EC1.1 displays correctly information displayed below the logo. The cover of the disk, when available on [MisicBrainz](https://musicbrainz.org/) is installed but a refresh of th UI is need to show it up on the screen.
 
 ## Installation
 
@@ -63,9 +62,8 @@ The simplest method of installation is to click the green github "Clone or downl
 
 1. Download and transfer this file to the /home/pi directory in the target moOde player
 2. On the target moOde player, go to the /home/pi directory and unzip the file
-3. Change to the /home/pi/moOdeCDPlay-master directory which has been created
-4. Execute the command
-`/bin/bash install.sh` or, alternatively, mark the script executable and...well...you know the drill
+3. Change to the /home/pi/moOdeCDPlayer-master directory which has been created
+4. Execute the command `. install.sh`.
 
 5. Once the script finishes successfully, you should reboot. At this point the moOde CD playback function should be working and you can delete both moOdeCDPlay-master.zip and the moOdeCDPlay-master directory.
 
@@ -79,8 +77,4 @@ This code was developed on the following system
 - moOde 7.2.1
 - RPi3B
 - DVD player : HL-DT-ST DVDRAM GT30N [purchased new on-line for less than 20€]. It is a bit too noisy
-
-### SoX
-
-A problem experienced in early testing with audible dropouts during CD playback was traced to SoX resampling at 32 bit/384KHz (inadvertently left on after a stress test of the RPi4B). Disabling resampling eliminated the dropouts. Your mileage with SoX resampling may vary.
 
