@@ -209,6 +209,8 @@ def info_from_cdtext(disc):
     else:
         return None
 
+    disc_info["discid"] = disc.id
+
     disc_info["tracks"] = {}
     tracks_info = disc_info["tracks"]
 
@@ -358,6 +360,7 @@ def info_from_musicbrainz(disc):
         metadata = {"source" : "musicbrainz",
                      "album"       : title,
                      "albumartist" : artist,
+                     "discid"      : disc.id,
                      "tracks"      : {}
                     }
 
@@ -392,6 +395,7 @@ def info_default(disc):
     metadata = {"source"      : "default",
                 "album"       : "Unknown",
                 "albumartist" : "Unknown",
+                "discid"      : disc.id,
                 "tracks"      : {}
                }
     
