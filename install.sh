@@ -10,13 +10,14 @@ if [ ! -f /var/www/command/moode.php ]; then
     exit 1
 fi
 
-sudo apt -y install libcdio-utils \
+sudo apt -y install libcdio-dev \
+                    libcdio-utils \
                     python3-musicbrainzngs \
                     python3-requests \
                     python3-libdiscid \
                     swig 
 
-sudo pip3 install -U pycdio
+sudo pip3 install -U pycdio==2.1.0
 sudo pip3 install -U python-mpd2
 
 sudo cp addaudiocd.sh /usr/local/bin/addaudiocd.sh
@@ -29,15 +30,12 @@ sudo chmod +x /usr/local/bin/addaudiocd.sh
 sudo chmod +x /usr/local/bin/remaudiocd.sh
 sudo chmod +x /usr/local/bin/moodecdplayer
 
-#if [[ ! -f /var/www/coverart.php.ori ]] ; then
-#    sudo cp /var/www/coverart.php /var/www/coverart.php.ori
-#fi
-#sudo cp coverart.php /var/www/coverart.php
-
 if [[ ! -f /var/www/inc/playerlib.php.ori ]] ; then
     sudo cp /var/www/inc/playerlib.php /var/www/inc/playerlib.php.ori
 fi
-sudo cp playerlib.php /var/www/inc/playerlib.php
+
+sudo cp /var/www/inc/playerlib.php.ori /var/www/inc/playerlib.php
+sudo patch /var/www/inc/playerlib.php < playerlib.php.patch
 
 
 sudo mkdir -p /var/lib/moode_cd_library/default_cd
