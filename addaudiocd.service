@@ -1,9 +1,0 @@
-[UNIT]
-Description=audio cd insertion
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/addaudiocd.sh
-
-[Install]
-WantedBy=multi-user.target
