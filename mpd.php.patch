@@ -1,0 +1,27 @@
+*** mpd.php.ori	2022-07-08 13:32:41.000000000 +0200
+--- mpd.php	2022-09-19 17:42:13.834755955 +0200
+***************
+*** 596,601 ****
+--- 596,617 ----
+  		$current['album'] = '';
+  		$current['coverurl'] = DEF_COVER;
+  		debugLog('enhanceMetadata(): error: currentsong file is NULL');
++          // Here is the modification for moOdeCDPlayer
++          // CD Audio
++          } else if (substr($song['file'], 0, 7) == 'cdda://') {
++                $current['coverurl'] = 'imagesw/current_cd/' . basename(glob("/var/local/www/imagesw/current_cd/*.jpg")[0]);
++ 	       //$current['thumb_hash'] = md5(dirname($song['file'])); // siehe in /var/www/command/queue.php
++ 	       $track=basename($song['file']);
++ 	       $current['title'] = isset($song['Title']) ? $song['Title'] : "Track " . $track;
++ 	       $current['track'] = $track;
++ 	       $current['album'] = isset($song['Album']) ? htmlspecialchars($song['Album']) : "Audio CD";
++ 	       if (!isset($song['Artist'])){
++ 	       	       $current['artist_count'] = 1;
++ 	       	       $current['artist'] = "Unknown Artist";
++ 	       }
++ //	       $current['encoded'] = "&ndash;";
++ 	       unset($current['encoded']);
++          //  END of the changes
+  	} else {
+  		// Only do this code block once for a given file
+  		if ($current['file'] != $_SESSION['currentfile']) {

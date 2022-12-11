@@ -1,44 +1,40 @@
 #!/bin/bash
 
-echo "Install V-EC1 moOdeCDPlay files in moOde."
+echo "Install V0.3 moOdeCDPlay files in moOde."
 
-# moOdeCDPlay V0.1 script
-if [ ! -f /var/www/command/moode.php ]; then
+if [ ! -x `which moodeutl` ]; then
     echo
     echo "I'm sorry, Dave, I'm afraid I can't do that."
     echo "In case you didn't notice, this doesn't look like a moOde installation."
     exit 1
 fi
 
-sudo apt -y install libcdio-dev \
-                    libcdio-utils \
-                    python3-musicbrainzngs \
-                    python3-requests \
-                    python3-libdiscid \
-                    swig 
-
-sudo pip3 install -U pycdio==2.1.0
-sudo pip3 install -U python-mpd2
-
-sudo cp addaudiocd.sh /usr/local/bin/addaudiocd.sh
-sudo cp remaudiocd.sh /usr/local/bin/remaudiocd.sh
-sudo cp moodecdplayer.py /usr/local/bin/moodecdplayer
-sudo cp addaudiocd.service /etc/systemd/system/addaudiocd.service
-sudo cp remaudiocd.service /etc/systemd/system/remaudiocd.service
+sudo cp moodecdplayer /usr/local/bin/moodecdplayer
+sudo cp moodeengupdate /usr/local/bin/moodeengupdate
+sudo cp audiocd@.service /etc/systemd/system/audiocd@.service
 sudo cp 99-srX.rules /etc/udev/rules.d/99-srX.rules
-sudo chmod +x /usr/local/bin/addaudiocd.sh
-sudo chmod +x /usr/local/bin/remaudiocd.sh
+sudo cp mpd.custom.conf /etc/mpd.custom.conf
 sudo chmod +x /usr/local/bin/moodecdplayer
+sudo chmod +x /usr/local/bin/moodeengupdate
 
-if [[ ! -f /var/www/inc/playerlib.php.ori ]] ; then
-    sudo cp /var/www/inc/playerlib.php /var/www/inc/playerlib.php.ori
+udevadm control --reload
+udevadm trigger
+
+# Add feature 'Developer tweaks' to account for mpd.custom.conf
+moodeutl -A add 32768
+
+# Backup files have extension '.orig'
+if [[ ! -f /var/www/inc/mpd.php.orig ]] ; then
+    sudo patch -b /var/www/inc/mpd.php mpd.php.patch
 fi
-
-sudo cp /var/www/inc/playerlib.php.ori /var/www/inc/playerlib.php
-sudo patch /var/www/inc/playerlib.php < playerlib.php.patch
-
+if [[ ! -f /var/www/command/queue.php.orig ]] ; then
+    sudo patch -b /var/www/command/queue.php queue.php.patch
+fi
 
 sudo mkdir -p /var/lib/moode_cd_library/default_cd
 sudo cp icon-cd-5.jpg /var/lib/moode_cd_library/default_cd/default_cd.jpg
+# Eine kleine Bildvariante erstellen?
+sudo ln /var/lib/moode_cd_library/default_cd/default_cd.jpg /var/lib/moode_cd_library/default_cd/default_cd_sm.jpg
+sudo ln -s /var/lib/moode_cd_library/default_cd /var/local/www/imagesw/current_cd
 
-echo "Done - please reboot moOde to complete installation."
+echo "Done - please insert a CD."

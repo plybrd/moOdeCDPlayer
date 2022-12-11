@@ -1,2 +1,11 @@
-KERNEL=="sr[0-9]", ACTION=="change", ENV{ID_CDROM_MEDIA_TRACK_COUNT_AUDIO}!="", TAG+="systemd", ENV{SYSTEMD_WANTS}="addaudiocd.service"
-KERNEL=="sr[0-9]", ACTION=="change", ENV{DISK_EJECT_REQUEST}=="1", TAG+="systemd", ENV{SYSTEMD_WANTS}="remaudiocd.service"
+# optical drives
+SUBSYSTEM=="block", ENV{ID_CDROM}=="1", TAG-="uaccess", TAG-="seat", MODE="0644"
+
+KERNEL=="sr[0-9]", ACTION=="change", ENV{ID_CDROM_MEDIA_TRACK_COUNT_AUDIO}!="", TAG+="systemd", ENV{SYSTEMD_WANTS}="audiocd@insert\\x20$name\\x20$env{ID_CDROM_MEDIA_TRACK_COUNT_AUDIO}.service"
+
+
+# in /lib/udev/rules.d/60-cdrom_id.rules:
+# media eject button pressed
+#ENV{DISK_EJECT_REQUEST}=="?*", RUN+="cdrom_id --eject-media $name", GOTO="cdrom_end"
+# I need a command for RUN to delete all previouns commands, is there an other way?
+ENV{DISK_EJECT_REQUEST}=="?*", TAG+="systemd", RUN="/bin/sh -c 'echo Starting audiocd.servce.'", ENV{SYSTEMD_WANTS}="audiocd@eject\\x20$name.service"

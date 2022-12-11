@@ -1,9 +1,0 @@
-[UNIT]
-Description=audio cd ejection
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/remaudiocd.sh
-
-[Install]
-WantedBy=multi-user.target

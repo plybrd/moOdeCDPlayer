@@ -1,3 +1,35 @@
+# This Fork
+happened accidentally. I planed to use an unused Raspberry Pi B rev 1 (with only 256(!) MB RAM) as the head of a CD Player. OK, WLAN network is no big deal so it should also play the music provided by network. MoOde looked fine and with moOdeCDplay it should be an easy goal. I was right with moOde but not with moOdeCDplay due to
+
+ - current version 8.1.2 (2022-07-08) of moOde
+ - RaspiOS Bullseye (11.3)
+ - Raspberry Pi B rev 1 (with only 256 MB RAM)
+
+I ended up changing nearly all files but icon-cd-5.jpg, going back from python to bash, and cutting of all the fancy nice stuff like CD text and MusicBrainz. The result is a higher responsiveness (at least with Raspi B rev 1) and much less access to the DVD player. The few lines in file 'mpd.custom.conf' will hopefully increease the play back quality further when moOde is switched to mpd 0.23.8 or higer.
+
+### Hardware: Raspberry Pi B rev 1 (256 MB RAM)
+
+#### Some hints for file "/boot/config.txt":
+```
+# Memory for GPU (The minimum value is 16, however this disables
+# certain GPU features.)
+gpu_mem=16
+# Using I2S
+# PCM_FS=29 + PCM_DIN=30 soldered, PCM_CLK=18 + PCM_DOUT21 on P1
+# Can be overridden by raspi-gpio or pinctrl entries in Device Tree!
+# Alt0
+gpio=18=a0
+gpio=21=a0
+# Alt2
+gpio=29=a2
+gpio=30=a2
+
+
+```
+
+#### I2C
+This Raspberry is using I2C *Bus 0*! All newer version are using *bus 1*. The firmware of sound cards often look only for the latter one.
+
 # moOde CD play
 
 This repo contains code to add a CD playback function to the Raspberry Pi-based moOde audio player (http://moodeaudio.org).

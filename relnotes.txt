@@ -3,6 +3,10 @@
 # a set of routines which enable moOde
 # to play a music CD
 
+# v0.3 2022-12-5
+# Removed all python dependencies. All is done by the bash script
+# "moodecdplayer", one systemd servie, and udev rules.
+
 # V0.2 2021-05-14
 # EC - tested on MoodeAudio 7.2
 #    - build a play list from the CD content 

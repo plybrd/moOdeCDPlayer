@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+version='moodecdplyer v0.3 (for Raspi B rev 1 256MB), pb'
+
+MPC="/usr/bin/mpc"
+optspec=":vh-:"
+while getopts "$optspec" optchar; do
+    case "${optchar}" in
+        -)
+            case "${OPTARG}" in
+                insert)
+		    name="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+		    n_tracks="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+		    echo "$0 Doing option: '--${OPTARG}', values: '${name}' '${n_tracks}'" >&2;
+		    $MPC clear
+		    for i in $(/usr/bin/seq 1 ${n_tracks}); do
+			$MPC add cdda://dev/${name}/${i}
+		    done
+		    $MPC play 1
+		    #/usr/local/bin/moodeengupdate
+		    exit 0
+		    ;;
+                eject)
+		    name="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+		    echo "$0 Doing option: '--${OPTARG}', value: '${name}'" >&2;
+		    counter=0
+		    while [ "`$MPC -f '%file%' current | /bin/grep cdda://dev/sr0/`" != "" ]; do
+			$MPC stop > /dev/null
+			sleep 1
+			# If we eject the cd before mpd (v0.35.5-1moode3) stops using it, mpd hangs!
+			((counter++))
+			if (( $counter > 5 )); then
+			    # I hate waiting
+			    /lib/udev/cdrom_id --eject-media /dev/$name > /dev/null
+			    systemctl stop mpd
+			    # Will be restarted by moode!
+			fi
+		    done
+		    $MPC -f "%position% %file%" playlist | /bin/grep cdda://dev/${name}/ | /usr/bin/awk '{print $1}' | $MPC del
+		    /lib/udev/cdrom_id --eject-media /dev/$name > /dev/null
+		    /usr/local/bin/moodeengupdate
+		    exit 0
+		    ;;
+		*)
+		    if [ "$OPTERR" = 1 ] && [ "${optspec:0:1}" = ":" ]; then
+			echo "Unknown option --${OPTARG}" >&2
+		    fi
+		    ;;
+	    esac;;
+	v)
+	    echo $version >&2
+	    exit 0
+	    ;;
+	h)
+	    echo $version >&2
+	    echo "usage: $0 [-h|--insert <device-name (e.g. 'sr0')> <number-of-tracks>|--eject <device-name>]" >&2
+	    exit 2
+	    ;;
+	*)
+	    if [ "$OPTERR" != 1 ] || [ "${optspec:0:1}" = ":" ]; then
+		echo "Non-option argument: '-${OPTARG}'" >&2
+	    fi
+	    ;;
+    esac
+done
+$0 -h

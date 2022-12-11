@@ -1,0 +1,11 @@
+[Unit]
+Description=Audio CD (insertion or ejection)
+
+[Service]
+Type=simple
+Environment="MCPOPTIONS=%I"
+ExecStart=/usr/bin/bash -c "moodecdplayer --$MCPOPTIONS"
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target
